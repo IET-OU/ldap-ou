@@ -1,8 +1,11 @@
 {
   "name": "iet-ou/ldap-ou",
-  "description": "© 2012, 2013, 2019 The Open University (IET).",
+  "description": "Lightweight Directory Access Protocol, for The OU. | © 2012, 2013, 2019 The Open University (IET).",
   "license": "proprietary",
   "time": "2019-02-05",
+  "support": {
+    "source": "https://gitlab.com/nfreear/ldap-ou.git"
+  },
   "autoload": {
     "psr-4": {
       "IET_OU\\LdapOu\\": "src/"
@@ -17,12 +20,12 @@
   },
   "scripts": {
     "test": [
-      "@test-2",
+      "@ldap",
       "parallel-lint src",
-      "# php ldapou.php"
+      "# php src/ldapou.php"
     ],
-    "#": "composer test-2 -vvv -- --oucu=xyzz123",
-    "test-2": "IET_OU\\LdapOu\\LdapOu::test"
+    "#": "composer ldap -v -- --oucu=xyzz123",
+    "ldap": "IET_OU\\LdapOu\\LdapOu::test"
   },
   "extra": {
     "#": [
