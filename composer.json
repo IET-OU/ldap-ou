@@ -1,0 +1,36 @@
+{
+  "name": "iet-ou/ldap-ou",
+  "description": "© 2012, 2013, 2019 The Open University (IET).",
+  "license": "proprietary",
+  "time": "2019-02-05",
+  "autoload": {
+    "psr-4": {
+      "IET_OU\\LdapOu\\": "src/"
+    }
+  },
+  "require": {
+    "zendframework/zend-ldap": "^2.10",
+    "vlucas/phpdotenv": "^3.3"
+  },
+  "require-dev": {
+    "jakub-onderka/php-parallel-lint": "^1.0"
+  },
+  "scripts": {
+    "test": [
+      "@test-2",
+      "parallel-lint src",
+      "# php ldapou.php"
+    ],
+    "#": "composer test-2 -vvv -- --oucu=xyzz123",
+    "test-2": "IET_OU\\LdapOu\\LdapOu::test"
+  },
+  "extra": {
+    "#": [
+      "https://github.com/search?q=org%3AIET-OU+ldap&type=Commits",
+      "https://github.com/IET-OU/learningdesign/commits/38248347/tools_phase2/src/OU/IetUtilityBundle/Library/LdapOu.php#!-Aug-2013",
+      "https://github.com/IET-OU/pd-open-ac-uk/blob/master/sites/all/modules/custom/ou_people/ou_people.module#!-July-2012",
+      "https://github.com/IET-OU/pd-open-ac-uk/blob/master/sites/all/modules/custom/parser_eventrss/includes/EventRssSimplePieParser.inc#!-June-2012",
+      "https://github.com/IET-OU/coldfusion-people-profiles/blob/master/_includes/cfc/people.cfc"
+    ]
+  }
+}

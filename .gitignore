@@ -1,0 +1,8 @@
+
+.env
+
+/composer.lock
+/vendor
+/data/*.json
+/data/*
+*BAK*
