@@ -17,6 +17,7 @@ class LdapOu
     const JSON_FILE = __DIR__ . '/../data/ldap-search.json';
     const SCHEMA_FILE = __DIR__ . '/../data/ldap-schema.txt';
 
+    // Defaults.
     const HOST = 'DC1.open.ac.uk';
     const PORT = 3268;
     const BASE_DN = 'DC=Open,DC=AC,DC=UK';
@@ -24,27 +25,37 @@ class LdapOu
 
     const EXAMPLE_OUCU = 'xyzz123';
 
+    const ATTR_DEFAULT = 'cn|dn|samaccountname|samaccounttype|name|department|mail|'.
+        'extensionattribute2|lastlogontimestamp|whencreated|whenchanged|objectclass';
+    const ATTR_ALL = '*';
+    const ATTR_SPECIAL = '*|+';
+
     protected static $io;
     protected static $ldap;
+
+    protected static $searchResult;
 
     public static function test(Event $event)
     {
         self::$io = $event->getIO();
         self::$io->warning(__METHOD__);
 
-        if (self::$io->isVerbose()) {
-            print_r([ \get_class($event), $event->getName(), $event->getArguments(), ]);
-        }
+        self::debug([ \get_class($event), $event->getName(), $event->getArguments(), ]);
 
         self::loadDotenv();
 
         self::connect();
 
+        if (self::$io->isVerbose()) {
+            self::$io->info(\get_class(self::$ldap));
+            print_r(self::$ldap->getOptions());
+        }
+
         self::dumpSchema();
 
-        $oucuFilter = sprintf(self::FILTER_FORMAT, self::getenvDefault('LDAP_OUCU', self::EXAMPLE_OUCU));
+        $result = self::searchByOucu();
 
-        $result = self::search($oucuFilter);
+        self::debug('Email :~ ' .  self::getEmailAddress());
 
         file_put_contents( self::JSON_FILE, json_encode( $result->toArray(), JSON_PRETTY_PRINT | JSON_PARTIAL_OUTPUT_ON_ERROR ));
     }
@@ -53,7 +64,7 @@ class LdapOu
     {
         $result = \getenv($varname) ? \getenv($varname) : $default;
 
-        self::$io->warning("Getenv, $varname: $result", $context = [ ]);
+        self::debug("Getenv, $varname: $result");
 
         return $result;
     }
@@ -64,7 +75,7 @@ class LdapOu
         $dotenv->load();
     }
 
-    protected static function connect()
+    public static function connect()
     {
         self::$ldap = new \Zend\Ldap\Ldap([
           'host' => self::getenvDefault('LDAP_OU_HOST', self::HOST),
@@ -75,14 +86,7 @@ class LdapOu
           'accountFilterFormat' => self::getenvDefault('LDAP_OU_FILTER_FORMAT', self::FILTER_FORMAT),
         ]);
 
-        if (self::$io->isVerbose()) {
-            self::$io->info(\get_class(self::$ldap));
-            print_r(self::$ldap->getOptions());
-        }
-
-        self::$ldap->bind();
-
-        return self::$ldap;
+        return self::$ldap->bind();
     }
 
     protected static function dumpSchema()
@@ -93,21 +97,61 @@ class LdapOu
         }
     }
 
-    protected static function search($filter, $scope = Ldap::SEARCH_SCOPE_SUB, $attributes = [ '* '])
+    public static function search($filter, $scope = Ldap::SEARCH_SCOPE_SUB, $attributes = self::ATTR_DEFAULT)
     {
-        $result = self::$ldap->search( $filter, null, $scope, $attributes );
+        $arAttributes = is_string($attributes) ? explode('|', $attributes) : $attributes;
 
-        // Empty! $result = $ldap->search('(&(objectClass=student)(sAMAccountName=abc123))', null, Ldap::SEARCH_SCOPE_SUB, [ '*' ] );
+        self::$searchResult = self::$ldap->search( $filter, null, $scope, $arAttributes );
+        self::debug( 'Last error :~ ' . self::getError() );
 
-        $lastLogin = $result->toArray()[ 0 ][ 'lastlogontimestamp' ][ 0 ];
-        $oucu = $result->toArray()[ 0 ][ 'samaccountname' ];
-        $samaccounttype = $result->toArray()[ 0 ][ 'samaccounttype' ];
+        // Empty! $ldap->search('(&(objectClass=student)(sAMAccountName=abc123))', null, Ldap::SEARCH_SCOPE_SUB, [ '*' ]);
 
-        if (self::$io->isVeryVerbose()) {
-            print_r( $result->toArray() );
+        $lastLogin = self::get('lastlogontimestamp');
+        $oucu = self::get('samaccountname');
+        $samaccounttype = self::get('samaccounttype');
+
+        self::debug( self::$searchResult->toArray() );
+        self::debug([ $lastLogin , sha1( (string) $lastLogin /* . $oucu . $samaccounttype */ ) ]);
+
+        return self::$searchResult;
+    }
+
+    public static function getError()
+    {
+        return self::$ldap->getLastError() .' '. self::$ldap->getLastErrorCode();
+    }
+
+    public static function searchByOucu($oucu = null)
+    {
+        $oucu = $oucu ?: self::getenvDefault('LDAP_OUCU', self::EXAMPLE_OUCU);
+        $oucuFilter = sprintf(self::FILTER_FORMAT, $oucu);
+
+        return self::search($oucuFilter);
+    }
+
+    public static function exists()
+    {
+        return (bool) self::$searchResult->getFirst();
+    }
+
+    public static function getEmailAddress()
+    {
+        return self::get('mail');
+    }
+
+    public static function get($key)
+    {
+        return self::exists() ? self::$searchResult->toArray()[ 0 ][ $key ][ 0 ] : null;
+    }
+
+    protected static function debug($obj)
+    {
+        if (self::$io && self::$io->isVerbose()) {
+            if (is_string($obj)) {
+                self::$io->warning($obj);
+            } else {
+                print_r($obj);
+            }
         }
-        print_r([ $lastLogin , sha1( (string) $lastLogin /* . $oucu . $samaccounttype */ ) ]);
-
-        return $result;
     }
 }
