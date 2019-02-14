@@ -26,7 +26,7 @@ class LdapOu
     const EXAMPLE_OUCU = 'xyzz123';
 
     const ATTR_DEFAULT = 'cn|dn|samaccountname|samaccounttype|name|department|mail|'.
-        'extensionattribute2|lastlogontimestamp|whencreated|whenchanged|objectclass';
+        'extensionattribute2|extensionattribute4|sn|title|lastlogontimestamp|whencreated|whenchanged|objectclass';
     const ATTR_ALL = '*';
     const ATTR_SPECIAL = '*|+';
 
