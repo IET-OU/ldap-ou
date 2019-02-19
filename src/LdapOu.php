@@ -16,12 +16,14 @@ class LdapOu
     const DOT_ENV = __DIR__ . '/..';
     const JSON_FILE = __DIR__ . '/../data/ldap-search.json';
     const SCHEMA_FILE = __DIR__ . '/../data/ldap-schema.txt';
+    const JSON_OPTIONS = JSON_PRETTY_PRINT | JSON_PARTIAL_OUTPUT_ON_ERROR;
 
     // Defaults.
     const HOST = 'DC1.open.ac.uk';
     const PORT = 3268;
     const BASE_DN = 'DC=Open,DC=AC,DC=UK';
     const FILTER_FORMAT = '(&(objectClass=user)(sAMAccountName=%s))';
+    const TIMEOUT_SEC = 5;
 
     const EXAMPLE_OUCU = 'xyzz123';
 
@@ -42,29 +44,34 @@ class LdapOu
 
         self::debug([ \get_class($event), $event->getName(), $event->getArguments(), ]);
 
-        self::loadDotenv();
+        try {
+            self::loadDotenv();
 
-        self::connect();
+            self::connect();
 
-        if (self::$io->isVerbose()) {
-            self::$io->info(\get_class(self::$ldap));
-            print_r(self::$ldap->getOptions());
+            if (self::$io->isVerbose()) {
+                self::$io->info(\get_class(self::$ldap));
+                print_r(self::$ldap->getOptions());
+            }
+
+            self::dumpSchema();
+
+            $result = self::searchByOucu();
+
+            self::debug('Email :~ ' .  self::getEmailAddress());
+
+            file_put_contents(self::JSON_FILE, json_encode($result->toArray(), self::JSON_OPTIONS));
+        } catch (\Exception $ex) {
+            self::$io->error('ERROR: '. get_class($ex) . "\n  ". $ex->getMessage());
+            exit(1);
         }
-
-        self::dumpSchema();
-
-        $result = self::searchByOucu();
-
-        self::debug('Email :~ ' .  self::getEmailAddress());
-
-        file_put_contents( self::JSON_FILE, json_encode( $result->toArray(), JSON_PRETTY_PRINT | JSON_PARTIAL_OUTPUT_ON_ERROR ));
     }
 
     protected static function getenvDefault($varname, $default = null)
     {
         $result = \getenv($varname) ? \getenv($varname) : $default;
 
-        self::debug("Getenv, $varname: $result");
+        self::debug("Getenv, $varname: " . ($varname === 'LDAP_OU_PASS' ? 'xxxx' : $result));
 
         return $result;
     }
@@ -84,6 +91,7 @@ class LdapOu
           'password' => self::getenvDefault('LDAP_OU_PASS'), // $ldappass,
           'baseDn' => self::getenvDefault('LDAP_OU_BASE_DN', self::BASE_DN),
           'accountFilterFormat' => self::getenvDefault('LDAP_OU_FILTER_FORMAT', self::FILTER_FORMAT),
+          'networkTimeout' => self::getenvDefault('LDAP_OU_TIMEOUT', self::TIMEOUT_SEC),
         ]);
 
         return self::$ldap->bind();
