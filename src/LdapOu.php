@@ -5,6 +5,7 @@
  *
  * @copyright  © 2012, 2013, 2019 The Open University (IET).
  * @author     Nick Freear, 05-Feb-2019.
+ * @link https://docs.zendframework.com/zend-ldap/api/
  */
 
 use Zend\Ldap\Ldap;
@@ -29,6 +30,7 @@ class LdapOu
 
     const ATTR_DEFAULT = 'cn|dn|samaccountname|samaccounttype|name|department|mail|'.
         'extensionattribute2|extensionattribute4|sn|title|lastlogontimestamp|whencreated|whenchanged|objectclass';
+    const ATTR_MIN = 'cn|dn|samaccountname|mail|lastlogontimestamp';
     const ATTR_ALL = '*';
     const ATTR_SPECIAL = '*|+';
 
@@ -51,7 +53,7 @@ class LdapOu
 
             if (self::$io->isVerbose()) {
                 self::$io->info(\get_class(self::$ldap));
-                print_r(self::$ldap->getOptions());
+                // print_r(self::$ldap->getOptions());
             }
 
             self::dumpSchema();
@@ -92,6 +94,7 @@ class LdapOu
           'baseDn' => self::getenvDefault('LDAP_OU_BASE_DN', self::BASE_DN),
           'accountFilterFormat' => self::getenvDefault('LDAP_OU_FILTER_FORMAT', self::FILTER_FORMAT),
           'networkTimeout' => self::getenvDefault('LDAP_OU_TIMEOUT', self::TIMEOUT_SEC),
+          'useSsl' => self::getenvDefault('LDAP_OU_USE_SSL', false), // Tried: 'useStartTls' => true,
         ]);
 
         return self::$ldap->bind();
@@ -116,7 +119,7 @@ class LdapOu
 
         $lastLogin = self::get('lastlogontimestamp');
         $oucu = self::get('samaccountname');
-        $samaccounttype = self::get('samaccounttype');
+        // $samaccounttype = self::get('samaccounttype');
 
         self::debug( self::$searchResult->toArray() );
         self::debug([ $lastLogin , sha1( (string) $lastLogin /* . $oucu . $samaccounttype */ ) ]);
@@ -134,7 +137,7 @@ class LdapOu
         $oucu = $oucu ?: self::getenvDefault('LDAP_OUCU', self::EXAMPLE_OUCU);
         $oucuFilter = sprintf(self::FILTER_FORMAT, $oucu);
 
-        return self::search($oucuFilter);
+        return self::search($oucuFilter, Ldap::SEARCH_SCOPE_SUB, self::ATTR_MIN);
     }
 
     public static function exists()
