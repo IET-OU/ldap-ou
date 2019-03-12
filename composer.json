@@ -29,7 +29,7 @@
     ],
     "phpcs": "phpcs --standard=PSR2 src",
     "#": "composer ldap -v -- --oucu=xyzz123",
-    "ldap": "IET_OU\\LdapOu\\LdapOu::test"
+    "ldap": "IET_OU\\LdapOu\\LdapOu::cliTest"
   },
   "extra": {
     "branch-alias": {

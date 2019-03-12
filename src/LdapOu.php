@@ -6,6 +6,8 @@
  * @copyright  © 2012, 2013, 2019 The Open University (IET).
  * @author     Nick Freear, 05-Feb-2019.
  * @link https://docs.zendframework.com/zend-ldap/api/
+ * @link https://getcomposer.org/apidoc/1.6.2/Composer/IO/ConsoleIO.html
+ * @link https://getcomposer.org/apidoc/1.6.2/Composer/EventDispatcher/Event.html
  */
 
 use Zend\Ldap\Ldap;
@@ -34,15 +36,21 @@ class LdapOu
     const ATTR_ALL = '*';
     const ATTR_SPECIAL = '*|+';
 
+    const RE_ARG_OUCU = '/--oucu=(?P<arg>[a-z]\w+\d)/';
+
     protected static $io;
+    protected static $event;
     protected static $ldap;
 
     protected static $searchResult;
 
-    public static function test(Event $event)
+    public static function cliTest(Event $event)
     {
+        self::$event = $event;
         self::$io = $event->getIO();
         self::$io->warning(__METHOD__);
+
+        $oucu = self::argv(self::RE_ARG_OUCU, 'OUCU');
 
         self::debug([ \get_class($event), $event->getName(), $event->getArguments(), ]);
 
@@ -58,7 +66,7 @@ class LdapOu
 
             self::dumpSchema();
 
-            $result = self::searchByOucu();
+            $result = self::searchByOucu($oucu, self::$io->isVeryVerbose() ? self::ATTR_ALL : self::ATTR_MIN);
 
             self::debug('Email :~ ' .  self::getEmailAddress());
 
@@ -67,6 +75,17 @@ class LdapOu
             self::$io->error('ERROR: '. get_class($ex) . "\n  ". $ex->getMessage());
             exit(1);
         }
+    }
+
+    protected static function argv($regex, $label = null)
+    {
+        $argv = self::$event->getArguments();
+        $argc = count( $argv );
+
+        $result = $argc && preg_match($regex, $argv[ $argc - 1 ], $matches) ? $matches[ 'arg' ] : null;
+
+        self::debug("Arg, $label: " . $result);
+        return $result;
     }
 
     protected static function getenvDefault($varname, $default = null)
@@ -132,12 +151,12 @@ class LdapOu
         return self::$ldap->getLastError() .' '. self::$ldap->getLastErrorCode();
     }
 
-    public static function searchByOucu($oucu = null)
+    public static function searchByOucu($oucu = null, $attributes = self::ATTR_MIN)
     {
         $oucu = $oucu ?: self::getenvDefault('LDAP_OUCU', self::EXAMPLE_OUCU);
         $oucuFilter = sprintf(self::FILTER_FORMAT, $oucu);
 
-        return self::search($oucuFilter, Ldap::SEARCH_SCOPE_SUB, self::ATTR_MIN);
+        return self::search($oucuFilter, Ldap::SEARCH_SCOPE_SUB, $attributes);
     }
 
     public static function exists()
